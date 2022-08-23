@@ -5,20 +5,36 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
 	"go-pokerchips/config"
+	"go-pokerchips/controllers"
+	"go-pokerchips/routes"
+	"go-pokerchips/services"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 	"golang.org/x/net/context"
 	"log"
 	"net/http"
+	"time"
 )
 
-const WORKDIR = "."
+const (
+	WORKDIR = "."
+	TIMEOUT = 20
+)
 
 var (
 	server      *gin.Engine
 	mongoClient *mongo.Client
 	redisClient *redis.Client
+
+	userService         services.UserService
+	UserController      controllers.UserController
+	UserRouteController routes.UserRouteController
+
+	authCollection      *mongo.Collection
+	authService         services.AuthService
+	AuthController      controllers.AuthController
+	AuthRouteController routes.AuthRouteController
 )
 
 func initRedis(cfg config.Config, ctx context.Context) *redis.Client {
@@ -80,13 +96,24 @@ func main() {
 	}
 
 	// Create a non-nil, empty Context
-	ctx := context.TODO()
+	ctx, cancel := context.WithTimeout(context.TODO(), TIMEOUT*1000*time.Millisecond)
 
 	redisClient = initRedis(cfg, ctx)
 	mongoClient = initMongo(cfg, ctx)
 
+	authCollection = mongoClient.Database("poker-chips").Collection("users")
+	userService = services.NewUserService(authCollection)
+	authService = services.NewAuthService(authCollection)
+	AuthController = controllers.NewAuthController(authService, userService)
+	AuthRouteController = routes.NewAuthRouteController(AuthController)
+
+	UserController = controllers.NewUserController(userService)
+	UserRouteController = routes.NewRouteUserController(UserController)
+
 	// Create the Gin Engine instance
 	server = gin.Default()
+
+	defer cancel()
 
 	// Disconnect mongoDB
 	defer func() {
@@ -96,9 +123,12 @@ func main() {
 	}()
 
 	router := server.Group("/api")
-	router.GET("/healthchecker", func(ctx *gin.Context) {
-		ctx.JSON(http.StatusOK, gin.H{"status": "success", "message": "Welcome to Gin!"})
+	router.GET("/health-checker", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Welcome to Gin!"})
 	})
+
+	AuthRouteController.AuthRoute(router, userService)
+	UserRouteController.UserRoute(router, userService)
 
 	log.Fatal(server.Run(":" + cfg.Port))
 }
