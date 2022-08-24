@@ -1,9 +1,12 @@
 package main
 
 import (
+	"embed"
 	"fmt"
+	"github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
+	"go-pokerchips/chat"
 	"go-pokerchips/config"
 	"go-pokerchips/controllers"
 	"go-pokerchips/routes"
@@ -35,8 +38,11 @@ var (
 	authService         services.AuthService
 	AuthController      controllers.AuthController
 	AuthRouteController routes.AuthRouteController
+
+	frontend embed.FS
 )
 
+// initRedis to initialize Redis client
 func initRedis(cfg config.Config, ctx context.Context) *redis.Client {
 	// Create a new Redis client
 	client := redis.NewClient(&redis.Options{
@@ -70,6 +76,7 @@ func initRedis(cfg config.Config, ctx context.Context) *redis.Client {
 	return client
 }
 
+// initMongo to initialize MongoDB
 func initMongo(cfg config.Config, ctx context.Context) *mongo.Client {
 	// Create a new client and connect to the server
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(cfg.DBUri))
@@ -98,6 +105,7 @@ func main() {
 	// Create a non-nil, empty Context
 	ctx, cancel := context.WithTimeout(context.TODO(), TIMEOUT*1000*time.Millisecond)
 
+	// Initialize Redis and Mongo
 	redisClient = initRedis(cfg, ctx)
 	mongoClient = initMongo(cfg, ctx)
 
@@ -113,6 +121,7 @@ func main() {
 	// Create the Gin Engine instance
 	server = gin.Default()
 
+	// Cancel the context
 	defer cancel()
 
 	// Disconnect mongoDB
@@ -121,6 +130,15 @@ func main() {
 			fmt.Println("MongoDB disconnected")
 		}
 	}()
+
+	server.Use(static.Serve("/", static.LocalFile("./public", false)))
+
+	hub := chat.NewHub()
+	go hub.Run()
+
+	server.GET("/ws", func(c *gin.Context) {
+		chat.ServeWS(hub, c.Writer, c.Request)
+	})
 
 	router := server.Group("/api")
 	router.GET("/health-checker", func(c *gin.Context) {

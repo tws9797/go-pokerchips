@@ -13,7 +13,7 @@ import (
 func DeserializeUser(userService services.UserService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var accessToken string
-		cookie, err := c.Cookie("access_token")
+		cookie, err := c.Cookie("accessToken")
 
 		authorizationHeader := c.Request.Header.Get("Authorization")
 		fields := strings.Fields(authorizationHeader)
