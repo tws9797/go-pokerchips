@@ -2,7 +2,9 @@ package chat
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"log"
 	"net/http"
@@ -33,9 +35,11 @@ var (
 	space   = []byte{' '}
 )
 
-// Client is a middleman between the WebSocket connection and a single instance of the Hub type
+// Client is a middleman between the websocket connection and a single instance of the Hub type
 // To hold the connection
 type Client struct {
+	ID uuid.UUID `json:"id"`
+
 	hub *Hub
 
 	// The websocket connection
@@ -43,28 +47,45 @@ type Client struct {
 
 	// Buffered channel of outbound message (message routed from a client to the end user)
 	send chan []byte
+
+	rooms map[*Room]bool
+
+	Name string `json:"name"`
 }
 
 // newClient define Client struct
-func newClient(conn *websocket.Conn, hub *Hub) *Client {
+func newClient(conn *websocket.Conn, hub *Hub, name string) *Client {
 	return &Client{
-		conn: conn,
-		hub:  hub,
-		send: make(chan []byte, 256),
+		ID:    uuid.New(),
+		Name:  name,
+		conn:  conn,
+		hub:   hub,
+		send:  make(chan []byte, 256),
+		rooms: make(map[*Room]bool),
 	}
 }
 
-// ServeWS create Websocket connection, handles WebSocket requests from client/peer requests
+// ServeWS create Websocket connection, handles websocket requests from client/peer requests
 func ServeWS(hub *Hub, w http.ResponseWriter, r *http.Request) {
 
-	// Upgrade the HTTP server connection to the WebSocket
+	name, ok := r.URL.Query()["name"]
+
+	if !ok || len(name[0]) < 1 {
+		log.Println("Url Param 'name' is missing")
+		return
+	}
+
+	// Upgrade the HTTP server connection to the websocket
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println(err)
 		return
 	}
 
-	client := newClient(conn, hub)
+	// Create a new client instance for every websocket connection
+	client := newClient(conn, hub, name[0])
+
+	// Register the client in the hub
 	client.hub.register <- client
 
 	// Allow collection of memory referenced by the caller by doing all work in new goroutines
@@ -75,7 +96,7 @@ func ServeWS(hub *Hub, w http.ResponseWriter, r *http.Request) {
 	fmt.Println(*client)
 }
 
-// writePump handles sending the messages from the hub to the WebSocket connection
+// writePump handles sending the messages from the hub to the websocket connection
 // A goroutine running writePump is started for each connection. The
 // application ensures that there is at most one writer to a connection by
 // executing all writes from this goroutine.
@@ -147,7 +168,105 @@ func (c *Client) readPump() {
 	}
 }
 
+func (c *Client) handleNewMessage(jsonMessage []byte) {
+	var message Message
+	if err := json.Unmarshal(jsonMessage, &message); err != nil {
+		log.Printf("Error on unmarshal JSON message %s", err)
+	}
+
+	message.Sender = c
+
+	switch message.Action {
+	case SendMessageAction:
+		roomID := message.Target.GetId()
+
+		if room := c.hub.findRoomByID(roomID); room != nil {
+			room.broadcast <- &message
+		}
+	case JoinRoomAction:
+		c.handleJoinRoomMessage(message)
+	case LeaveRoomAction:
+		c.handleLeaveRoomMessage(message)
+	case JoinRoomPrivateAction:
+		c.handleJoinRoomPrivateMessage(message)
+	}
+
+}
+
+func (c *Client) handleJoinRoomMessage(message Message) {
+
+	roomName := message.Message
+
+	c.joinRoom(roomName, nil)
+}
+
+func (c *Client) handleLeaveRoomMessage(message Message) {
+	room := c.hub.findRoomByID(message.Message)
+	if room == nil {
+		return
+	}
+	if _, ok := c.rooms[room]; ok {
+		delete(c.rooms, room)
+	}
+
+	room.unregister <- c
+}
+
+func (c *Client) handleJoinRoomPrivateMessage(message Message) {
+	target := c.hub.findClientByID(message.Message)
+	if target == nil {
+		return
+	}
+
+	roomName := message.Message + c.ID.String()
+
+	c.joinRoom(roomName, target)
+	target.joinRoom(roomName, c)
+}
+
+func (c *Client) joinRoom(roomName string, sender *Client) {
+	room := c.hub.findRoomByName(roomName)
+
+	if room == nil {
+		room = c.hub.createRoom(roomName, sender != nil)
+	}
+
+	if sender == nil && room.Private {
+		return
+	}
+
+	if !c.isInRoom(room) {
+		c.rooms[room] = true
+		room.register <- c
+		c.notifyRoomJoined(room, sender)
+	}
+}
+
+func (c *Client) isInRoom(room *Room) bool {
+	if _, ok := c.rooms[room]; ok {
+		return true
+	}
+	return false
+}
+
+func (c *Client) notifyRoomJoined(room *Room, sender *Client) {
+	message := Message{
+		Action: RoomJoinedAction,
+		Target: room,
+		Sender: sender,
+	}
+
+	c.send <- message.encode()
+}
+
 func (c *Client) disconnect() {
 	c.hub.unregister <- c
+	for room := range c.rooms {
+		room.unregister <- c
+	}
 	c.conn.Close()
+}
+
+func (c *Client) GetName() string {
+	return c.Name
 }
