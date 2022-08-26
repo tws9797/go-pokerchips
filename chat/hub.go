@@ -29,7 +29,7 @@ func NewHub() *Hub {
 	}
 }
 
-// Run Hub server, accepting various requests
+// Run Hub server using broadcast, register and unregister channels to listen for different inbound messages
 func (h *Hub) Run() {
 	for {
 		select {
@@ -61,13 +61,16 @@ func (h *Hub) unregisterClient(client *Client) {
 
 // Send read messages to registered clients
 func (h *Hub) broadcastToClients(message []byte) {
+	//for client := range h.clients {
+	//	select {
+	//	case client.send <- message:
+	//	default:
+	//		close(client.send)
+	//		delete(h.clients, client)
+	//	}
+	//}
 	for client := range h.clients {
-		select {
-		case client.send <- message:
-		default:
-			close(client.send)
-			delete(h.clients, client)
-		}
+		client.send <- message
 	}
 }
 
@@ -76,6 +79,18 @@ func (h *Hub) findRoomByName(name string) *Room {
 	var foundRoom *Room
 	for room := range h.rooms {
 		if room.GetName() == name {
+			foundRoom = room
+			break
+		}
+	}
+
+	return foundRoom
+}
+
+func (h *Hub) findRoomByID(ID string) *Room {
+	var foundRoom *Room
+	for room := range h.rooms {
+		if room.GetId() == ID {
 			foundRoom = room
 			break
 		}
@@ -117,21 +132,8 @@ func (h *Hub) listOnlineClients(client *Client) {
 			Action: UserJoinedAction,
 			Sender: existingClient,
 		}
-
 		client.send <- message.encode()
 	}
-}
-
-func (h *Hub) findRoomByID(ID string) *Room {
-	var foundRoom *Room
-	for room := range h.rooms {
-		if room.GetId() == ID {
-			foundRoom = room
-			break
-		}
-	}
-
-	return foundRoom
 }
 
 func (h *Hub) findClientByID(ID string) *Client {

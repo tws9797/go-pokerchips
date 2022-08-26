@@ -1,7 +1,6 @@
 package main
 
 import (
-	"embed"
 	"fmt"
 	"github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
@@ -38,8 +37,6 @@ var (
 	authService         services.AuthService
 	AuthController      controllers.AuthController
 	AuthRouteController routes.AuthRouteController
-
-	frontend embed.FS
 )
 
 // initRedis to initialize Redis client

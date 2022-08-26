@@ -59,7 +59,6 @@ func (room *Room) registerClientInRoom(client *Client) {
 	if !room.Private {
 		room.notifyClientJoined(client)
 	}
-
 	room.clients[client] = true
 }
 

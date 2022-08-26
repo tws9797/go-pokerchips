@@ -1,7 +1,6 @@
 package chat
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/google/uuid"
@@ -85,15 +84,12 @@ func ServeWS(hub *Hub, w http.ResponseWriter, r *http.Request) {
 	// Create a new client instance for every websocket connection
 	client := newClient(conn, hub, name[0])
 
-	// Register the client in the hub
-	client.hub.register <- client
-
 	// Allow collection of memory referenced by the caller by doing all work in new goroutines
 	go client.writePump()
 	go client.readPump()
 
-	fmt.Println("New Client joined the hub")
-	fmt.Println(*client)
+	// Register the client in the hub Why move behind pump?
+	hub.register <- client
 }
 
 // writePump handles sending the messages from the hub to the websocket connection
@@ -101,6 +97,7 @@ func ServeWS(hub *Hub, w http.ResponseWriter, r *http.Request) {
 // application ensures that there is at most one writer to a connection by
 // executing all writes from this goroutine.
 func (c *Client) writePump() {
+	fmt.Println("writePump...")
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
@@ -110,6 +107,7 @@ func (c *Client) writePump() {
 	for {
 		select {
 		case message, ok := <-c.send:
+			fmt.Println("writing....")
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				//wsSocket close the channel
@@ -134,28 +132,37 @@ func (c *Client) writePump() {
 				return
 			}
 		case <-ticker.C:
+			fmt.Println("ticker...")
+			// Setting a new write deadline
+			// Write to a connection returns an error when the write operation does not complete by the last set deadline
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				fmt.Println("empty")
 				return
 			}
 		}
 	}
 }
 
-// readPump handles sending the messages from the websocket connection to the hub
+// readPump handles reading the messages from the websocket connection to the hub
 // The application runs readPump in a per-connection goroutine. The application
 // ensures that there is at most one reader on a connection by executing all
 // reads from this goroutine.
 func (c *Client) readPump() {
+	fmt.Println("readPump...")
 	defer func() {
 		c.disconnect()
 	}()
 
 	c.conn.SetReadLimit(maxMessageSize)
 	c.conn.SetReadDeadline(time.Now().Add(pongWait))
-	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
+	c.conn.SetPongHandler(func(string) error {
+		c.conn.SetReadDeadline(time.Now().Add(pongWait))
+		return nil
+	})
 
 	for {
+		fmt.Println("reading....")
 		_, message, err := c.conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
@@ -163,19 +170,22 @@ func (c *Client) readPump() {
 			}
 			break
 		}
-		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
-		c.hub.broadcast <- message
+		//message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
+		//c.hub.broadcast <- message
+
+		c.handleNewMessage(message)
 	}
 }
 
 func (c *Client) handleNewMessage(jsonMessage []byte) {
+	fmt.Println("handleNewMessage...")
 	var message Message
 	if err := json.Unmarshal(jsonMessage, &message); err != nil {
 		log.Printf("Error on unmarshal JSON message %s", err)
 	}
 
 	message.Sender = c
-
+	fmt.Println(message.Action)
 	switch message.Action {
 	case SendMessageAction:
 		roomID := message.Target.GetId()
@@ -190,7 +200,6 @@ func (c *Client) handleNewMessage(jsonMessage []byte) {
 	case JoinRoomPrivateAction:
 		c.handleJoinRoomPrivateMessage(message)
 	}
-
 }
 
 func (c *Client) handleJoinRoomMessage(message Message) {
@@ -231,6 +240,7 @@ func (c *Client) joinRoom(roomName string, sender *Client) {
 		room = c.hub.createRoom(roomName, sender != nil)
 	}
 
+	// Don't allow to join private rooms through public room message
 	if sender == nil && room.Private {
 		return
 	}
