@@ -3,8 +3,10 @@ package chat
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
+	"go-pokerchips/models"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"golang.org/x/net/context"
 	"log"
 	"net/http"
 	"time"
@@ -31,13 +33,15 @@ var upgrader = websocket.Upgrader{
 
 var (
 	newline = []byte{'\n'}
-	space   = []byte{' '}
+	//space   = []byte{' '}
 )
 
 // Client is a middleman between the websocket connection and a single instance of the Hub type
 // To hold the connection
 type Client struct {
-	ID uuid.UUID `json:"id"`
+	ID string `json:"id"`
+
+	Username string `json:"name"`
 
 	hub *Hub
 
@@ -48,19 +52,18 @@ type Client struct {
 	send chan []byte
 
 	rooms map[*Room]bool
-
-	Name string `json:"name"`
 }
 
 // newClient define Client struct
 func newClient(conn *websocket.Conn, hub *Hub, name string) *Client {
+
 	return &Client{
-		ID:    uuid.New(),
-		Name:  name,
-		conn:  conn,
-		hub:   hub,
-		send:  make(chan []byte, 256),
-		rooms: make(map[*Room]bool),
+		ID:       primitive.NewObjectID().String(),
+		Username: name,
+		conn:     conn,
+		hub:      hub,
+		send:     make(chan []byte, 256),
+		rooms:    make(map[*Room]bool),
 	}
 }
 
@@ -227,13 +230,16 @@ func (c *Client) handleJoinRoomPrivateMessage(message Message) {
 		return
 	}
 
-	roomName := message.Message + c.ID.String()
+	roomName := message.Message + c.GetID()
 
-	c.joinRoom(roomName, target)
-	target.joinRoom(roomName, c)
+	joinedRoom := c.joinRoom(roomName, target)
+
+	if joinedRoom != nil {
+		c.inviteTargetUser(target, joinedRoom)
+	}
 }
 
-func (c *Client) joinRoom(roomName string, sender *Client) {
+func (c *Client) joinRoom(roomName string, sender models.User) *Room {
 	room := c.hub.findRoomByName(roomName)
 
 	if room == nil {
@@ -242,7 +248,7 @@ func (c *Client) joinRoom(roomName string, sender *Client) {
 
 	// Don't allow to join private rooms through public room message
 	if sender == nil && room.Private {
-		return
+		return nil
 	}
 
 	if !c.isInRoom(room) {
@@ -250,8 +256,24 @@ func (c *Client) joinRoom(roomName string, sender *Client) {
 		room.register <- c
 		c.notifyRoomJoined(room, sender)
 	}
+
+	return room
 }
 
+func (c *Client) inviteTargetUser(target models.User, room *Room) {
+	ctx := context.TODO()
+
+	inviteMessage := &Message{
+		Action:  JoinRoomPrivateAction,
+		Message: target.GetID(),
+		Target:  room,
+		Sender:  c,
+	}
+
+	if err := redisClient.Publish(ctx, PubSubGeneralChannel, inviteMessage).Err(); err != nil {
+		log.Println(err)
+	}
+}
 func (c *Client) isInRoom(room *Room) bool {
 	if _, ok := c.rooms[room]; ok {
 		return true
@@ -259,7 +281,7 @@ func (c *Client) isInRoom(room *Room) bool {
 	return false
 }
 
-func (c *Client) notifyRoomJoined(room *Room, sender *Client) {
+func (c *Client) notifyRoomJoined(room *Room, sender models.User) {
 	message := Message{
 		Action: RoomJoinedAction,
 		Target: room,
@@ -277,6 +299,10 @@ func (c *Client) disconnect() {
 	c.conn.Close()
 }
 
-func (c *Client) GetName() string {
-	return c.Name
+func (c *Client) GetUsername() string {
+	return c.Username
+}
+
+func (c *Client) GetID() string {
+	return c.ID
 }

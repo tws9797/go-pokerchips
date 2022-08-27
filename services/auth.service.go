@@ -5,5 +5,5 @@ import (
 )
 
 type AuthService interface {
-	SignUpUser(*models.SignUpInput) (*models.UserDBResponse, error)
+	SignUpUser(*models.SignUpInput) (*models.DBUser, error)
 }

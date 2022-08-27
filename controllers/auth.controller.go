@@ -41,7 +41,7 @@ func (ac *AuthController) SignUpUser(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"status": "success", "data": gin.H{"user": models.FilteredResponse(newUser)}})
+	c.JSON(http.StatusCreated, gin.H{"status": "success", "data": gin.H{"user": newUser}})
 }
 
 func (ac *AuthController) SignInUser(c *gin.Context) {

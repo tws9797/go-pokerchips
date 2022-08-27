@@ -5,6 +5,8 @@ import (
 )
 
 type UserService interface {
-	FindUserById(string) (*models.UserDBResponse, error)
-	FindUserByUsername(string) (*models.UserDBResponse, error)
+	RemoveUser(string) error
+	GetAllUsers() ([]*models.DBUser, error)
+	FindUserById(string) (*models.DBUser, error)
+	FindUserByUsername(string) (*models.DBUser, error)
 }

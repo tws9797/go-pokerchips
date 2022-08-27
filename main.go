@@ -33,8 +33,12 @@ var (
 	UserController      controllers.UserController
 	UserRouteController routes.UserRouteController
 
-	authCollection      *mongo.Collection
-	authService         services.AuthService
+	authCollection *mongo.Collection
+	roomCollection *mongo.Collection
+
+	authService services.AuthService
+	roomService services.RoomService
+
 	AuthController      controllers.AuthController
 	AuthRouteController routes.AuthRouteController
 )
@@ -106,9 +110,14 @@ func main() {
 	redisClient = initRedis(cfg, ctx)
 	mongoClient = initMongo(cfg, ctx)
 
-	authCollection = mongoClient.Database("poker-chips").Collection("users")
+	db := mongoClient.Database("poker-chips")
+	authCollection = db.Collection("users")
+	roomCollection = db.Collection("rooms")
+
 	userService = services.NewUserService(authCollection)
 	authService = services.NewAuthService(authCollection)
+	roomService = services.NewRoomService(roomCollection)
+
 	AuthController = controllers.NewAuthController(authService, userService)
 	AuthRouteController = routes.NewAuthRouteController(AuthController)
 
@@ -130,7 +139,7 @@ func main() {
 
 	server.Use(static.Serve("/", static.LocalFile("./public", false)))
 
-	hub := chat.NewHub()
+	hub := chat.NewHub(userService, roomService, redisClient)
 	go hub.Run()
 
 	server.GET("/ws", func(c *gin.Context) {
