@@ -2,6 +2,7 @@ package chat
 
 import (
 	"encoding/json"
+	"go-pokerchips/models"
 	"log"
 )
 
@@ -14,10 +15,10 @@ const JoinRoomPrivateAction = "join-room-private"
 const RoomJoinedAction = "room-joined"
 
 type Message struct {
-	Action  string  `json:"action"`
-	Message string  `json:"message"`
-	Target  *Room   `json:"target"`
-	Sender  *Client `json:"sender"`
+	Action  string      `json:"action"`
+	Message string      `json:"message"`
+	Target  *Room       `json:"target"`
+	Sender  models.User `json:"sender"`
 }
 
 func (message *Message) encode() []byte {

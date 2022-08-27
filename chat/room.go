@@ -2,15 +2,17 @@ package chat
 
 import (
 	"fmt"
-	"github.com/google/uuid"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"golang.org/x/net/context"
+	"log"
 )
 
 const welcomeMessage = "%s joined the room"
 
 type Room struct {
-	ID      uuid.UUID `json:"id"`
-	Name    string    `json:"name"`
-	Private bool      `json:"private"`
+	ID      primitive.ObjectID `json:"id"`
+	Name    string             `json:"name"`
+	Private bool               `json:"private"`
 
 	//Registered clients
 	clients map[*Client]bool
@@ -29,7 +31,7 @@ type Room struct {
 // NewRoom creates a new Room type
 func NewRoom(name string, private bool) *Room {
 	return &Room{
-		ID:         uuid.New(),
+		ID:         primitive.NewObjectID(),
 		Name:       name,
 		Private:    private,
 		clients:    make(map[*Client]bool),
@@ -49,7 +51,7 @@ func (room *Room) RunRoom() {
 		case client := <-room.unregister:
 			room.unregisterClientInRoom(client)
 		case message := <-room.broadcast:
-			room.broadcastToClientsInRoom(message.encode())
+			room.publishRoomMessage(message.encode())
 		}
 	}
 }
@@ -83,7 +85,7 @@ func (room *Room) notifyClientJoined(client *Client) {
 		Message: fmt.Sprintf(welcomeMessage, client.GetName()),
 	}
 
-	room.broadcastToClientsInRoom(message.encode())
+	room.publishRoomMessage(message.encode())
 }
 
 // GetId get the room ID
@@ -94,4 +96,26 @@ func (room *Room) GetId() string {
 // GetName get the room name
 func (room *Room) GetName() string {
 	return room.Name
+}
+
+func (room *Room) publishRoomMessage(message []byte) {
+	ctx := context.TODO()
+
+	err := redisClient.Publish(ctx, room.Name, message).Err()
+
+	if err != nil {
+		log.Println(err)
+	}
+}
+
+func (room *Room) subscribeToRoomMessages() {
+	ctx := context.TODO()
+
+	pubsub := redisClient.Subscribe(ctx, room.Name)
+
+	ch := pubsub.Channel()
+
+	for msg := range ch {
+		room.broadcastToClientsInRoom([]byte(msg.Payload))
+	}
 }
