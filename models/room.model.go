@@ -5,10 +5,14 @@ import (
 	"time"
 )
 
-type Room struct {
+type Room interface {
+	GetID()
+	GetName()
+}
+
+type DBRoom struct {
 	ID        primitive.ObjectID `json:"id,omitempty" bson:"_id,omitempty"`
 	Name      string             `json:"name" bson:"name"`
-	Private   bool               `json:"private" bson:"private"`
 	CreatedAt time.Time          `json:"created_at" bson:"created_at"`
 	UpdatedAt time.Time          `json:"updated_at" bson:"updated_at"`
 }
@@ -20,10 +24,10 @@ type RoomInput struct {
 	UpdatedAt time.Time `json:"updated_at" bson:"updated_at"`
 }
 
-type RoomDBResponse struct {
-	ID        primitive.ObjectID `json:"id" bson:"_id"`
-	Name      string             `json:"name" bson:"name"`
-	Private   bool               `json:"private" bson:"private"`
-	CreatedAt time.Time          `json:"created_at" bson:"created_at"`
-	UpdatedAt time.Time          `json:"updated_at" bson:"updated_at"`
+func (room *DBRoom) GetName() string {
+	return room.Name
+}
+
+func (room *DBRoom) GetID() string {
+	return room.ID.Hex()
 }
