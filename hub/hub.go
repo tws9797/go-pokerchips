@@ -86,10 +86,11 @@ func (hub *Hub) findRoomByID(id string) *Room {
 
 func (hub *Hub) findRoomByName(name string) *Room {
 
-	var foundRoom *Room
 	for room := range hub.rooms {
+		fmt.Println(room.name)
+
 		if room.name == name {
-			return foundRoom
+			return room
 		}
 	}
 
@@ -99,8 +100,6 @@ func (hub *Hub) findRoomByName(name string) *Room {
 func (hub *Hub) createRoom(name string) *Room {
 
 	room := NewRoom(name)
-	fmt.Println("room")
-	fmt.Println(room)
 	go room.RunRoom()
 	hub.rooms[room] = true
 

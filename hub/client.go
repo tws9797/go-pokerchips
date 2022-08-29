@@ -190,12 +190,15 @@ func (client *Client) handleNewMessage(message []byte) {
 	case JoinRoomAction:
 		fmt.Println("JoinRoomAction")
 		roomName := msg.Message
+		fmt.Println(roomName)
+
 		room := client.hub.findRoomByName(roomName)
+		fmt.Println("is Room found?")
+		fmt.Println(room)
 		if room == nil {
 			room = client.hub.createRoom(roomName)
 		}
 		client.room = room
-		fmt.Println(client.room == room)
 		client.room.register <- client
 	case LeaveRoomAction:
 		fmt.Println("LeaveRoomAction")
