@@ -29,7 +29,31 @@
 <body>
 <div id="app" style="background-color: grey">
     <div class="container h-100">
+
         <div class="row justify-content-center h-100">
+
+            <div class="col-12 room" v-if="!ws">
+                <div class="input-group">
+                    <input
+                            v-model="user.name"
+                            class="form-control name"
+                            placeholder="Please fill in your (nick)name"
+                            @keyup.enter.exact="joinRoom"
+                    />
+                    <input
+                            v-model="roomInput"
+                            class="form-control name"
+                            placeholder="Type the room you want to join"
+                            @keyup.enter.exact="joinRoom"
+                    />
+                    <div class="input-group-append">
+                      <span class="input-group-text send_btn" @click="joinRoom">
+                        Join Room
+                      </span>
+                    </div>
+                </div>
+            </div>
+
             <div class="col-12 form" v-if="!ws">
                 <div class="input-group">
                     <input

@@ -1,12 +1,16 @@
 package hub
 
-import "fmt"
+import (
+	"fmt"
+	"go-pokerchips/models"
+)
 
 const welcomeMessage = "%s joined the room"
 
 type Room struct {
-	id   string
-	name string
+	Uri    string         `json:"uri"`
+	Pot    int            `json:"pot"`
+	Record map[string]int `json:"record"`
 
 	//Registered clients
 	clients map[*Client]bool
@@ -21,10 +25,12 @@ type Room struct {
 	broadcast chan *Message
 }
 
-func NewRoom(name string) *Room {
+func NewRoom(room *models.DBRoom) *Room {
 
 	return &Room{
-		name:       name,
+		Uri:        room.Uri,
+		Pot:        room.Pot,
+		Record:     room.Record,
 		clients:    make(map[*Client]bool),
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
@@ -41,7 +47,7 @@ func (room *Room) RunRoom() {
 		case client := <-room.unregister:
 			room.unregisterClientInRoom(client)
 		case message := <-room.broadcast:
-			fmt.Printf("Broadcast message: %v to the room %v", message, room.name)
+			fmt.Printf("Broadcast message: %v to the room %v", message, room.Uri)
 			room.broadcastClientsInRoom(message.encode())
 		}
 	}
@@ -78,7 +84,7 @@ func (room *Room) notifyClientJoined(client *Client) {
 
 	message := &Message{
 		Action:  SendMessageAction,
-		Target:  room.name,
+		Target:  room.Uri,
 		Message: fmt.Sprintf(welcomeMessage, client.name),
 	}
 	room.broadcastClientsInRoom(message.encode())

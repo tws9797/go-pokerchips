@@ -51,10 +51,10 @@ type Client struct {
 func newClient(conn *websocket.Conn, hub *Hub, room *Room, name string) *Client {
 
 	return &Client{
-		name: name,
 		conn: conn,
 		hub:  hub,
 		room: room,
+		name: name,
 		send: make(chan []byte, 256),
 	}
 }
@@ -135,13 +135,7 @@ func (client *Client) readPump() {
 	}
 }
 
-func ServeWS(hub *Hub, room *Room, c *gin.Context) {
-	name, ok := c.Request.URL.Query()["name"]
-
-	if !ok || len(name[0]) < 1 {
-		log.Println("Url Param 'name' is missing")
-		return
-	}
+func ServeWS(hub *Hub, room *Room, name string, c *gin.Context) {
 
 	// Upgrade the HTTP server connection to the websocket
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
@@ -150,19 +144,17 @@ func ServeWS(hub *Hub, room *Room, c *gin.Context) {
 		return
 	}
 
-	client := newClient(conn, hub, room, name[0])
+	client := newClient(conn, hub, room, name)
 
 	go client.writePump()
 	go client.readPump()
 
-	hub.register <- client
 	room.register <- client
 }
 
 func (client *Client) disconnect() {
 
 	fmt.Printf("%v disconnected from the room \n", client.name)
-	client.hub.unregister <- client
 	client.room.unregister <- client
 	client.conn.Close()
 }
@@ -183,16 +175,6 @@ func (client *Client) handleNewMessage(message []byte) {
 		client.room.broadcast <- &msg
 	case JoinRoomAction:
 		fmt.Println("JoinRoomAction")
-		roomName := msg.Message
-		fmt.Println(roomName)
-
-		room := client.hub.findRoomByName(roomName)
-		fmt.Println("is Room found?")
-		fmt.Println(room)
-		if room == nil {
-			room = client.hub.CreateRoom(roomName)
-		}
-		client.room = room
 		client.room.register <- client
 	case LeaveRoomAction:
 		fmt.Println("LeaveRoomAction")

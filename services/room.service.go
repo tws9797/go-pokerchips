@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/dchest/uniuri"
 	"go-pokerchips/models"
 	"go.mongodb.org/mongo-driver/bson"
@@ -63,6 +64,8 @@ func (rs *RoomServiceImpl) FindRoomByUri(uri string) (*models.DBRoom, error) {
 	ctx := context.TODO()
 	var room *models.DBRoom
 
+	fmt.Println("asdadsdssdauri")
+	fmt.Println(uri)
 	query := bson.M{"uri": uri}
 	err := rs.collection.FindOne(ctx, query).Decode(&room)
 

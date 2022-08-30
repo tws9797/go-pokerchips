@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
@@ -59,10 +60,8 @@ func main() {
 	roomRouteController = routers.NewRoomRouteController(roomController)
 
 	// Start the websocket hub
-	h := hub.NewHub()
-	go h.Run()
-
 	r = gin.Default()
+	h := hub.NewHub()
 
 	// Serve local file
 	r.Use(static.Serve("/", static.LocalFile("./public", false)))
@@ -70,22 +69,28 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{"status": "success", "message": "pong"})
 	})
 
-	r.GET("/ws", func(c *gin.Context) {
-		name, _ := c.Request.URL.Query()["name"]
-		roomId, _ := c.Request.URL.Query()["room"]
-
-		room := h.FindRoomByID(roomId[0])
-		if room == nil {
-			room = h.CreateRoom(name[0])
-		}
-
-		hub.ServeWS(h, room, c)
-	})
-
 	apiRouter := r.Group("/api")
 	{
 		roomRouteController.RoomRoute(apiRouter)
 	}
+
+	r.GET("/ws", func(c *gin.Context) {
+		name, _ := c.Request.URL.Query()["name"]
+		roomId, _ := c.Request.URL.Query()["uri"]
+
+		ro := h.FindRoomByUri(roomId[0])
+
+		fmt.Println(ro)
+
+		if ro == nil {
+			fmt.Println("room is nil in memory")
+
+			room, _ := roomService.FindRoomByUri(roomId[0])
+			ro = h.CreateRoom(room)
+		}
+
+		hub.ServeWS(h, ro, name[0], c)
+	})
 
 	log.Fatal(r.Run("localhost:" + cfg.Port))
 }

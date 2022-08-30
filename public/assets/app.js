@@ -15,8 +15,9 @@ var app = new Vue({
       axios.post("http://localhost:8080/api/room", {
         name: this.user.name
       }).then(res => {
+        console.log(res.data.data)
         this.room = {
-          id: res.data.data.id,
+          uri: res.data.data.uri,
           name: res.data.data.uri,
           messages: []
         }
@@ -24,8 +25,8 @@ var app = new Vue({
       })
     },
     connectToWebsocket() {
-      this.ws = new WebSocket(this.serverUrl + "?name=" + this.user.name + "&room=" + this.room.id);
-      this.ws.addEventListener('open', (event) => { this.onWebsocketOpen(event) });
+      console.log(this.room)
+      this.ws = new WebSocket(this.serverUrl + "?name=" + this.user.name + "&uri=" + this.room.uri);
       this.ws.addEventListener('message', (event) => { this.handleNewMessage(event) });
     },
     onWebsocketOpen() {
@@ -61,10 +62,20 @@ var app = new Vue({
       }
     },
     joinRoom() {
-      this.ws.send(JSON.stringify({ action: 'join-room', message: this.roomInput }));
-      this.messages = [];
-      this.room = ({ "name": this.roomInput, "messages": [] });
-      this.roomInput = "";
+      this.room = {
+        uri: this.roomInput,
+        name: this.roomInput,
+        messages: []
+      }
+
+      this.connectToWebsocket()
+      this.ws.onopen = function (e) {
+        this.ws.send(JSON.stringify({ action: 'join-room', message: this.roomInput }));
+        console.log("send")
+        this.messages = [];
+        this.room = ({ "name": this.roomInput, "messages": [] });
+        this.roomInput = "";
+      }.bind(this)
     },
     leaveRoom(room) {
       this.ws.send(JSON.stringify({ action: 'leave-room', message: room.name }));
