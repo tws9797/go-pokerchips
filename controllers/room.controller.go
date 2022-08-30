@@ -8,6 +8,8 @@ import (
 	"strings"
 )
 
+const DefaultChipsPerUser = 1000
+
 type RoomController struct {
 	roomService services.RoomService
 }
@@ -17,6 +19,7 @@ func NewRoomController(roomService services.RoomService) RoomController {
 }
 
 func (rc *RoomController) CreateRoom(c *gin.Context) {
+
 	var room *models.RoomInput
 
 	if err := c.ShouldBindJSON(&room); err != nil {
@@ -24,13 +27,17 @@ func (rc *RoomController) CreateRoom(c *gin.Context) {
 		return
 	}
 
+	room.Record = make(map[string]int)
+	room.Record[room.Creator] = DefaultChipsPerUser
+
 	newRoom, err := rc.roomService.CreateRoom(room)
 
 	if err != nil {
 		if strings.Contains(err.Error(), "room already exists") {
 			c.JSON(http.StatusConflict, gin.H{"status": "fail", "message": err.Error()})
+		} else {
+			c.JSON(http.StatusBadGateway, gin.H{"status": "fail", "message": err.Error()})
 		}
-		c.JSON(http.StatusBadGateway, gin.H{"status": "fail", "message": err.Error()})
 		return
 	}
 

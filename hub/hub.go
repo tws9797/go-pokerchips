@@ -1,6 +1,9 @@
 package hub
 
-import "fmt"
+import (
+	"fmt"
+	"go-pokerchips/services"
+)
 
 type Hub struct {
 
@@ -18,6 +21,8 @@ type Hub struct {
 
 	// Track the rooms available
 	rooms map[*Room]bool
+
+	roomService services.RoomService
 }
 
 func NewHub() *Hub {
@@ -55,8 +60,8 @@ func (hub *Hub) registerClient(client *Client) {
 
 // unregisterClient remove client from the hub and close the channel
 func (hub *Hub) unregisterClient(client *Client) {
-	fmt.Println("unregisterClient")
 
+	fmt.Println("unregisterClient")
 	if _, ok := hub.clients[client]; ok {
 		delete(hub.clients, client)
 	}
@@ -66,13 +71,24 @@ func (hub *Hub) unregisterClient(client *Client) {
 func (hub *Hub) broadcastClients(message []byte) {
 
 	fmt.Println("broadcastClients")
-
 	for client := range hub.clients {
 		client.send <- message
 	}
 }
 
-func (hub *Hub) findRoomByID(id string) *Room {
+func (hub *Hub) findRoomByName(name string) *Room {
+
+	for room := range hub.rooms {
+		fmt.Println(room.name)
+		if room.name == name {
+			return room
+		}
+	}
+
+	return nil
+}
+
+func (hub *Hub) FindRoomByID(id string) *Room {
 
 	var foundRoom *Room
 	for room := range hub.rooms {
@@ -84,20 +100,7 @@ func (hub *Hub) findRoomByID(id string) *Room {
 	return nil
 }
 
-func (hub *Hub) findRoomByName(name string) *Room {
-
-	for room := range hub.rooms {
-		fmt.Println(room.name)
-
-		if room.name == name {
-			return room
-		}
-	}
-
-	return nil
-}
-
-func (hub *Hub) createRoom(name string) *Room {
+func (hub *Hub) CreateRoom(name string) *Room {
 
 	room := NewRoom(name)
 	go room.RunRoom()

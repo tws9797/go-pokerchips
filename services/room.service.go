@@ -3,15 +3,17 @@ package services
 import (
 	"context"
 	"errors"
+	"github.com/dchest/uniuri"
 	"go-pokerchips/models"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"time"
 )
 
 type RoomService interface {
-	CreateRoom(room *models.RoomInput) (*models.DBRoom, error)
-	FindRoomByName(name string) (*models.DBRoom, error)
+	CreateRoom(*models.RoomInput) (*models.DBRoom, error)
+	FindRoomByUri(uri string) (*models.DBRoom, error)
 }
 
 type RoomServiceImpl struct {
@@ -26,6 +28,7 @@ func (rs *RoomServiceImpl) CreateRoom(room *models.RoomInput) (*models.DBRoom, e
 
 	ctx := context.Background()
 
+	room.Uri = uniuri.NewLen(5)
 	room.CreatedAt = time.Now()
 	room.UpdatedAt = room.CreatedAt
 
@@ -33,9 +36,15 @@ func (rs *RoomServiceImpl) CreateRoom(room *models.RoomInput) (*models.DBRoom, e
 
 	if err != nil {
 		if er, ok := err.(mongo.WriteException); ok && er.WriteErrors[0].Code == 11000 {
-			return nil, errors.New("room name already exist")
+			return nil, errors.New("room already exists")
 		}
 		return nil, err
+	}
+
+	index := mongo.IndexModel{Keys: bson.M{"uri": 1}, Options: options.Index().SetUnique(true)}
+
+	if _, err := rs.collection.Indexes().CreateOne(ctx, index); err != nil {
+		return nil, errors.New("could not create index for title")
 	}
 
 	var newRoom *models.DBRoom
@@ -49,12 +58,12 @@ func (rs *RoomServiceImpl) CreateRoom(room *models.RoomInput) (*models.DBRoom, e
 	return newRoom, nil
 }
 
-func (rs *RoomServiceImpl) FindRoomByName(name string) (*models.DBRoom, error) {
+func (rs *RoomServiceImpl) FindRoomByUri(uri string) (*models.DBRoom, error) {
 
 	ctx := context.TODO()
 	var room *models.DBRoom
 
-	query := bson.M{"name": name}
+	query := bson.M{"uri": uri}
 	err := rs.collection.FindOne(ctx, query).Decode(&room)
 
 	if err != nil {

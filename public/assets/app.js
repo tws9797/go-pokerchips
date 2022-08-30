@@ -11,27 +11,36 @@ var app = new Vue({
     users: []
   },
   methods: {
-    connect() {
-      this.connectToWebsocket();
+    createRoom() {
+      axios.post("http://localhost:8080/api/room", {
+        name: this.user.name
+      }).then(res => {
+        this.room = {
+          id: res.data.data.id,
+          name: res.data.data.uri,
+          messages: []
+        }
+        this.connectToWebsocket()
+      })
     },
     connectToWebsocket() {
-      this.ws = new WebSocket(this.serverUrl + "?name=" + this.user.name);
+      this.ws = new WebSocket(this.serverUrl + "?name=" + this.user.name + "&room=" + this.room.id);
       this.ws.addEventListener('open', (event) => { this.onWebsocketOpen(event) });
       this.ws.addEventListener('message', (event) => { this.handleNewMessage(event) });
     },
     onWebsocketOpen() {
       console.log("connected to WS!");
     },
-
     handleNewMessage(event) {
-
-      console.log("handle new message");
 
       let data = event.data;
       data = data.split(/\r?\n/);
 
+      console.log(data)
+
       for (let i = 0; i < data.length; i++) {
         let msg = JSON.parse(data[i]);
+
         // display the message in the correct room.
         const room = this.room;
         if (typeof room !== "undefined") {
@@ -40,6 +49,7 @@ var app = new Vue({
       }
     },
     sendMessage(room) {
+      console.log(room)
       // send message to correct room.
       if (room.newMessage !== "") {
         this.ws.send(JSON.stringify({

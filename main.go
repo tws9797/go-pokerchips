@@ -69,8 +69,17 @@ func main() {
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "success", "message": "pong"})
 	})
+
 	r.GET("/ws", func(c *gin.Context) {
-		hub.ServeWS(h, c)
+		name, _ := c.Request.URL.Query()["name"]
+		roomId, _ := c.Request.URL.Query()["room"]
+
+		room := h.FindRoomByID(roomId[0])
+		if room == nil {
+			room = h.CreateRoom(name[0])
+		}
+
+		hub.ServeWS(h, room, c)
 	})
 
 	apiRouter := r.Group("/api")

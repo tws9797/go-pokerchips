@@ -39,10 +39,9 @@ func (room *Room) RunRoom() {
 		case client := <-room.register:
 			room.registerClientInRoom(client)
 		case client := <-room.unregister:
-			room.unregisterClient(client)
+			room.unregisterClientInRoom(client)
 		case message := <-room.broadcast:
-			fmt.Println("broadcast~~~")
-			fmt.Println(message)
+			fmt.Printf("Broadcast message: %v to the room %v", message, room.name)
 			room.broadcastClientsInRoom(message.encode())
 		}
 	}
@@ -50,15 +49,14 @@ func (room *Room) RunRoom() {
 
 func (room *Room) registerClientInRoom(client *Client) {
 
-	fmt.Println("registerClientInRoom")
-	// Sending message before register the user so the user won't see the message him/herself joined
-	room.notifyClientJoined(client)
+	fmt.Printf("registerClientInRoom: %v\n", client.name)
 	room.clients[client] = true
+	room.notifyClientJoined(client)
 }
 
-func (room *Room) unregisterClient(client *Client) {
+func (room *Room) unregisterClientInRoom(client *Client) {
 
-	fmt.Println("unregisterClient")
+	fmt.Printf("unregisterClientInRoom: %v\n", client.name)
 	if _, ok := room.clients[client]; ok {
 		delete(room.clients, client)
 	}
@@ -66,23 +64,22 @@ func (room *Room) unregisterClient(client *Client) {
 
 func (room *Room) broadcastClientsInRoom(message []byte) {
 
-	fmt.Println("broadcastClientsInRoom")
-	fmt.Println(room.clients)
-	fmt.Println(string(message))
+	fmt.Printf("broadcastClientsInRoom: %v\n", string(message))
+	fmt.Println("The clients in room: ")
 	for client := range room.clients {
+		fmt.Println(client.name)
 		client.send <- message
 	}
 }
 
 func (room *Room) notifyClientJoined(client *Client) {
 
-	fmt.Println("notifyClientJoined")
+	fmt.Printf("notifyClientJoined: %v\n", client.name)
+
 	message := &Message{
 		Action:  SendMessageAction,
 		Target:  room.name,
 		Message: fmt.Sprintf(welcomeMessage, client.name),
 	}
-	fmt.Println(message)
-
 	room.broadcastClientsInRoom(message.encode())
 }

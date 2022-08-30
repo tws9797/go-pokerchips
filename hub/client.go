@@ -48,12 +48,13 @@ type Client struct {
 	room *Room
 }
 
-func newClient(conn *websocket.Conn, hub *Hub, name string) *Client {
+func newClient(conn *websocket.Conn, hub *Hub, room *Room, name string) *Client {
 
 	return &Client{
 		name: name,
 		conn: conn,
 		hub:  hub,
+		room: room,
 		send: make(chan []byte, 256),
 	}
 }
@@ -63,7 +64,6 @@ func newClient(conn *websocket.Conn, hub *Hub, name string) *Client {
 // The application ensures that there is at most one writer to a connection by executing all writes from this goroutine.
 func (client *Client) writePump() {
 
-	fmt.Println("writePump...")
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
@@ -84,9 +84,8 @@ func (client *Client) writePump() {
 			if err != nil {
 				return
 			}
-			fmt.Println("messge writing: ")
-			fmt.Println(string(message))
 
+			fmt.Printf("Write Pump: %v \n", string(message))
 			w.Write(message)
 
 			// Attach queued chat messages to the current websocket message.
@@ -113,7 +112,6 @@ func (client *Client) writePump() {
 // The application ensures that there is at most one reader on a connection by executing all reads from this goroutine.
 func (client *Client) readPump() {
 
-	fmt.Println("readPump...")
 	defer func() {
 		client.disconnect()
 	}()
@@ -132,14 +130,12 @@ func (client *Client) readPump() {
 			break
 		}
 
-		fmt.Println("message")
-		fmt.Println(string(message))
-
+		fmt.Printf("Read Pump Messages: %v\n", string(message))
 		client.handleNewMessage(message)
 	}
 }
 
-func ServeWS(hub *Hub, c *gin.Context) {
+func ServeWS(hub *Hub, room *Room, c *gin.Context) {
 	name, ok := c.Request.URL.Query()["name"]
 
 	if !ok || len(name[0]) < 1 {
@@ -154,26 +150,26 @@ func ServeWS(hub *Hub, c *gin.Context) {
 		return
 	}
 
-	client := newClient(conn, hub, name[0])
-	hub.register <- client
+	client := newClient(conn, hub, room, name[0])
 
 	go client.writePump()
 	go client.readPump()
+
+	hub.register <- client
+	room.register <- client
 }
 
 func (client *Client) disconnect() {
-	fmt.Println("disconnect")
-	fmt.Println(client)
+
+	fmt.Printf("%v disconnected from the room \n", client.name)
 	client.hub.unregister <- client
 	client.room.unregister <- client
 	client.conn.Close()
 }
 
 func (client *Client) handleNewMessage(message []byte) {
-	fmt.Println(client)
-	fmt.Println("handleNewMessage")
-	fmt.Println(string(message))
 
+	fmt.Printf("handleNewMessage from %v: %v \n", client, string(message))
 	var msg Message
 	if err := json.Unmarshal(message, &msg); err != nil {
 		log.Printf("Error on unmarshal JSON message %s", err)
@@ -183,7 +179,7 @@ func (client *Client) handleNewMessage(message []byte) {
 
 	switch msg.Action {
 	case SendMessageAction:
-		fmt.Println("sendmessageAction")
+		fmt.Println("SendMessageAction")
 		client.room.broadcast <- &msg
 	case JoinRoomAction:
 		fmt.Println("JoinRoomAction")
@@ -194,7 +190,7 @@ func (client *Client) handleNewMessage(message []byte) {
 		fmt.Println("is Room found?")
 		fmt.Println(room)
 		if room == nil {
-			room = client.hub.createRoom(roomName)
+			room = client.hub.CreateRoom(roomName)
 		}
 		client.room = room
 		client.room.register <- client
