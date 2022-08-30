@@ -2,7 +2,7 @@ var app = new Vue({
   el: '#app',
   data: {
     ws: null,
-    serverUrl: "ws://localhost/ws",
+    serverUrl: "ws://localhost:8080/ws",
     roomInput: null,
     room: null,
     user: {
@@ -45,7 +45,7 @@ var app = new Vue({
         this.ws.send(JSON.stringify({
           action: 'send-message',
           message: room.newMessage,
-          target: room.name
+          target:  room.name
         }));
         room.newMessage = "";
       }

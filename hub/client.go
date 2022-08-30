@@ -36,7 +36,8 @@ var (
 // Client hold the connection between the websocket and hub instance.
 type Client struct {
 	name string
-	hub  *Hub
+
+	hub *Hub
 
 	// The websocket connection
 	conn *websocket.Conn
@@ -84,7 +85,7 @@ func (client *Client) writePump() {
 				return
 			}
 			fmt.Println("messge writing: ")
-			fmt.Println(message)
+			fmt.Println(string(message))
 
 			w.Write(message)
 
@@ -132,7 +133,7 @@ func (client *Client) readPump() {
 		}
 
 		fmt.Println("message")
-		fmt.Println(message)
+		fmt.Println(string(message))
 
 		client.handleNewMessage(message)
 	}
@@ -145,9 +146,6 @@ func ServeWS(hub *Hub, c *gin.Context) {
 		log.Println("Url Param 'name' is missing")
 		return
 	}
-
-	fmt.Println("name")
-	fmt.Println(name)
 
 	// Upgrade the HTTP server connection to the websocket
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)

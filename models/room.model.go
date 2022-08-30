@@ -19,7 +19,6 @@ type DBRoom struct {
 
 type RoomInput struct {
 	Name      string    `json:"name" bson:"name" binding:"required"`
-	Private   bool      `json:"private" bson:"private"`
 	CreatedAt time.Time `json:"created_at" bson:"created_at"`
 	UpdatedAt time.Time `json:"updated_at" bson:"updated_at"`
 }

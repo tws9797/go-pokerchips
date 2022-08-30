@@ -2,12 +2,14 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
 	"go-pokerchips/config"
+	"go-pokerchips/controllers"
 	"go-pokerchips/hub"
+	"go-pokerchips/routers"
+	"go-pokerchips/services"
 	"go.mongodb.org/mongo-driver/mongo"
 	"log"
 	"net/http"
@@ -20,9 +22,14 @@ const (
 )
 
 var (
-	server      *gin.Engine
+	r           *gin.Engine
 	mongoClient *mongo.Client
 	redisClient *redis.Client
+
+	roomCollection      *mongo.Collection
+	roomService         services.RoomService
+	roomController      controllers.RoomController
+	roomRouteController routers.RoomRouteController
 )
 
 func main() {
@@ -35,25 +42,41 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), TIMEOUT*time.Second)
 	defer cancel()
 
+	// Get redis and mongodb connection
 	redisClient = config.InitRedis(cfg, ctx)
 	mongoClient = config.InitMongo(cfg, ctx)
+	defer func() {
+		if err = mongoClient.Disconnect(ctx); err != nil {
+			panic(err)
+		}
+	}()
 
-	server = gin.Default()
-	fmt.Println("run HUb")
+	// Register all routes, controllers and services
+	db := mongoClient.Database("poker-chips")
+	roomCollection = db.Collection("rooms")
+	roomService = services.NewRoomService(roomCollection)
+	roomController = controllers.NewRoomController(roomService)
+	roomRouteController = routers.NewRoomRouteController(roomController)
+
+	// Start the websocket hub
 	h := hub.NewHub()
 	go h.Run()
 
-	// Serve local file
-	server.Use(static.Serve("/", static.LocalFile("./public", false)))
+	r = gin.Default()
 
-	server.GET("/ping", func(c *gin.Context) {
+	// Serve local file
+	r.Use(static.Serve("/", static.LocalFile("./public", false)))
+	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "success", "message": "pong"})
 	})
-
-	server.GET("/ws", func(c *gin.Context) {
-		fmt.Println("start serving websocket")
+	r.GET("/ws", func(c *gin.Context) {
 		hub.ServeWS(h, c)
 	})
 
-	log.Fatal(server.Run("localhost:" + cfg.Port))
+	apiRouter := r.Group("/api")
+	{
+		roomRouteController.RoomRoute(apiRouter)
+	}
+
+	log.Fatal(r.Run("localhost:" + cfg.Port))
 }

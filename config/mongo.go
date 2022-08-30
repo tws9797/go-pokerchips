@@ -17,12 +17,6 @@ func InitMongo(cfg Config, ctx context.Context) *mongo.Client {
 		panic(err)
 	}
 
-	defer func() {
-		if err = client.Disconnect(ctx); err != nil {
-			panic(err)
-		}
-	}()
-
 	// Ping the primary
 	if err = client.Ping(ctx, readpref.Primary()); err != nil {
 		panic(err)

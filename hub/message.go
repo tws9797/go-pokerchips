@@ -14,7 +14,7 @@ const (
 type Message struct {
 	Action  string  `json:"action"`
 	Message string  `json:"message"`
-	Target  *Room   `json:"target"`
+	Target  string  `json:"target"`
 	Sender  *Client `json:"sender"`
 }
 
