@@ -1,14 +1,16 @@
-var app = new Vue({
-  el: '#app',
-  data: {
-    ws: null,
-    serverUrl: "ws://localhost:8080/ws",
-    roomInput: null,
-    room: null,
-    user: {
-      name: ""
-    },
-    users: []
+let app = {
+  data() {
+    return {
+      ws: null,
+      serverUrl: "ws://localhost:8080/ws",
+      roomInput: null,
+      room: null,
+      pot: 0,
+      user: {
+        name: ""
+      },
+      users: []
+    }
   },
   methods: {
     createRoom() {
@@ -25,7 +27,6 @@ var app = new Vue({
       })
     },
     connectToWebsocket() {
-      console.log(this.room)
       this.ws = new WebSocket(this.serverUrl + "?name=" + this.user.name + "&uri=" + this.room.uri);
       this.ws.addEventListener('message', (event) => { this.handleNewMessage(event) });
     },
@@ -37,8 +38,6 @@ var app = new Vue({
       let data = event.data;
       data = data.split(/\r?\n/);
 
-      console.log(data)
-
       for (let i = 0; i < data.length; i++) {
         let msg = JSON.parse(data[i]);
 
@@ -49,6 +48,14 @@ var app = new Vue({
         }
       }
     },
+    addPot() {
+      console.log('addpot')
+      this.ws.send(JSON.stringify({ action: 'add-pot', pot: parseInt(this.pot) }));
+    },
+    retrievePot() {
+      console.log('retrievePot')
+      this.ws.send(JSON.stringify({ action: 'retrieve-pot', pot: parseInt(this.pot) }));
+    },
     sendMessage(room) {
       console.log(room)
       // send message to correct room.
@@ -56,12 +63,13 @@ var app = new Vue({
         this.ws.send(JSON.stringify({
           action: 'send-message',
           message: room.newMessage,
-          target:  room.name
         }));
         room.newMessage = "";
       }
     },
     joinRoom() {
+
+      console.log("joinRoom")
       this.room = {
         uri: this.roomInput,
         name: this.roomInput,
@@ -70,7 +78,9 @@ var app = new Vue({
 
       this.connectToWebsocket()
       this.ws.onopen = function (e) {
-        this.ws.send(JSON.stringify({ action: 'join-room', message: this.roomInput }));
+        console.log(e)
+
+        // this.ws.send(JSON.stringify({ action: 'join-room', message: this.roomInput }));
         console.log("send")
         this.messages = [];
         this.room = ({ "name": this.roomInput, "messages": [] });
@@ -81,4 +91,6 @@ var app = new Vue({
       this.ws.send(JSON.stringify({ action: 'leave-room', message: room.name }));
     }
   }
-})
+}
+
+Vue.createApp(app).mount("#app")

@@ -6,7 +6,7 @@ import (
 )
 
 type DBRoom struct {
-	ID        primitive.ObjectID `json:"id,omitempty" bson:"_id,omitempty"`
+	Id        primitive.ObjectID `json:"id,omitempty" bson:"_id,omitempty"`
 	Uri       string             `json:"uri" bson:"uri"`
 	Pot       int                `json:"pot" bson:"pot"`
 	Record    map[string]int     `json:"record" bson:"record"`

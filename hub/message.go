@@ -6,6 +6,8 @@ import (
 )
 
 const (
+	AddPot            = "add-pot"
+	RetrievePot       = "retrieve-pot"
 	SendMessageAction = "send-message"
 	JoinRoomAction    = "join-room"
 	LeaveRoomAction   = "leave-room"
@@ -14,7 +16,7 @@ const (
 type Message struct {
 	Action  string  `json:"action"`
 	Message string  `json:"message"`
-	Target  string  `json:"target"`
+	Pot     int     `json:"pot,omitempty"`
 	Sender  *Client `json:"sender"`
 }
 

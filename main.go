@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
@@ -61,7 +60,7 @@ func main() {
 
 	// Start the websocket hub
 	r = gin.Default()
-	h := hub.NewHub()
+	h := hub.NewHub(roomService)
 
 	// Serve local file
 	r.Use(static.Serve("/", static.LocalFile("./public", false)))
@@ -78,18 +77,18 @@ func main() {
 		name, _ := c.Request.URL.Query()["name"]
 		roomId, _ := c.Request.URL.Query()["uri"]
 
-		ro := h.FindRoomByUri(roomId[0])
+		foundRoom := h.FindRoomByUri(roomId[0])
 
-		fmt.Println(ro)
+		if foundRoom == nil {
 
-		if ro == nil {
-			fmt.Println("room is nil in memory")
-
+			// Get room from database
 			room, _ := roomService.FindRoomByUri(roomId[0])
-			ro = h.CreateRoom(room)
+
+			// Create the room in the memory
+			foundRoom = h.CreateRoom(room)
 		}
 
-		hub.ServeWS(h, ro, name[0], c)
+		hub.ServeWS(h, foundRoom, name[0], c)
 	})
 
 	log.Fatal(r.Run("localhost:" + cfg.Port))

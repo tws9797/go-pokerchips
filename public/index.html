@@ -1,117 +1,56 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Chat</title>
-    <!-- Load required Bootstrap and BootstrapVue CSS -->
-    <link
-            type="text/css"
-            rel="stylesheet"
-            href="https://unpkg.com/bootstrap/dist/css/bootstrap.min.css"
-    />
-    <link
-            type="text/css"
-            rel="stylesheet"
-            href="https://unpkg.com/bootstrap-vue@latest/dist/bootstrap-vue.min.css"
-    />
-    <link type="text/css" rel="stylesheet" href="assets/style.css" />
-    <!-- Load polyfills to support older browsers -->
-    <script
-            src="https://polyfill.io/v3/polyfill.min.js?features=es2015%2CIntersectionObserver"
-            crossorigin="anonymous"
-    ></script>
-    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
-
-    <!-- Load Vue followed by BootstrapVue -->
-    <script src="https://unpkg.com/vue@2"></script>
-    <script src="https://unpkg.com/bootstrap-vue@latest/dist/bootstrap-vue.min.js"></script>
+    <title>Vue.js Routing From Scratch Using Vue Router CDN</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+    <script src="https://unpkg.com/vue-router"></script>
 </head>
-
 <body>
-<div id="app" style="background-color: grey">
-    <div class="container h-100">
 
-        <div class="row justify-content-center h-100">
+<div id="app" class="container" style="margin-top: 50px;">
 
-            <div class="col-12 room" v-if="!ws">
-                <div class="input-group">
-                    <input
-                            v-model="user.name"
-                            class="form-control name"
-                            placeholder="Please fill in your (nick)name"
-                            @keyup.enter.exact="joinRoom"
-                    />
-                    <input
-                            v-model="roomInput"
-                            class="form-control name"
-                            placeholder="Type the room you want to join"
-                            @keyup.enter.exact="joinRoom"
-                    />
-                    <div class="input-group-append">
-                      <span class="input-group-text send_btn" @click="joinRoom">
-                        Join Room
-                      </span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-12 form" v-if="!ws">
-                <div class="input-group">
-                    <input
-                            v-model="user.name"
-                            class="form-control name"
-                            placeholder="Please fill in your (nick)name"
-                            @keyup.enter.exact="createRoom"
-                    />
-                    <div class="input-group-append">
-                  <span class="input-group-text send_btn" @click="createRoom">
-                  Create Room
-                  </span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="chat" v-if="room">
-                <div class="card">
-                    <div class="card-header msg_head">
-                        <div class="d-flex bd-highlight justify-content-center">
-                            {{room.name}}
-                            <span class="card-close" @click="leaveRoom(room)">leave</span>
-                        </div>
-                    </div>
-                    <div class="card-body msg_card_body">
-                        <div
-                                v-for="(message, key) in room.messages"
-                                :key="key"
-                                class="d-flex justify-content-start mb-4"
-                        >
-                            <div class="msg_cotainer">
-                                {{message.message}}
-                                <span class="msg_name" v-if="message.sender">{{message.sender.name}}</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card-footer">
-                        <div class="input-group">
-                  <textarea
-                          v-model="room.newMessage"
-                          name=""
-                          class="form-control type_msg"
-                          placeholder="Type your message..."
-                          @keyup.enter.exact="sendMessage(room)"
-                  ></textarea>
-                            <div class="input-group-append">
-                    <span class="input-group-text send_btn" @click="sendMessage(room)"
-                    >></span
-                    >
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    <nav class="navbar navbar-expand-lg navbar-light" style="background-color: #e3f2fd;">
+        <div class="collapse navbar-collapse" id="navbarTogglerDemo03">
+            <ul class="navbar-nav mr-auto mt-2 mt-lg-0">
+                <li> <router-link class="nav-link" to="/"> Home </router-link> </li>
+                <li> <router-link class="nav-link" to="about"> About </router-link> </li>
+                <li> <router-link class="nav-link" to="contact"> Contact </router-link> </li>
+            </ul>
         </div>
+    </nav>
+
+    <div class="text-center" style="margin-top: 20px;">
+        <router-view></router-view>
     </div>
 </div>
-</body>
 
-<script src="assets/app.js"></script>
+<!-- Vue Pages -->
+<script src="pages/home.vue.js"></script>
+<script src="pages/about.vue.js"></script>
+<script src="pages/contact.vue.js"></script>
+
+<!-- Vue Instance and Routes -->
+<script>
+
+    var routes = [
+        { path: '/', component: Home },
+        { path: '/about', component: About },
+        { path: '/contact', component: Contact }
+    ];
+
+    const router =  VueRouter.createRouter({
+        routes,
+        history
+    })
+
+    const app = new Vue({
+        router,
+        history: createWebHistory(),
+
+    }).$mount('#app')
+
+</script>
+
+</body>
 </html>
