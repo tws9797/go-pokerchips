@@ -14,10 +14,15 @@ type DBRoom struct {
 	UpdatedAt time.Time          `json:"updated_at" bson:"updated_at"`
 }
 
-type RoomInput struct {
+type CreateRoomInput struct {
 	Creator   string         `json:"name" bson:"name"`
 	Uri       string         `json:"uri" bson:"uri"`
 	Record    map[string]int `json:"record" bson:"record"`
 	CreatedAt time.Time      `json:"created_at" bson:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at" bson:"updated_at"`
+}
+
+type JoinRoomInput struct {
+	User string `json:"name"`
+	Uri  string `json:"uri"`
 }

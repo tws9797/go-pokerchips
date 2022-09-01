@@ -13,11 +13,11 @@ import (
 )
 
 type RoomService interface {
-	CreateRoom(*models.RoomInput) (*models.DBRoom, error)
-	FindRoomByUri(uri string) (*models.DBRoom, error)
-	RegisterUserInRoom(id string, name string) error
-	AddPot(id string, name string, chips int) (int, error)
-	RetrievePot(id string, name string, chips int) (int, error)
+	CreateRoom(*models.CreateRoomInput) (*models.DBRoom, error)
+	FindRoomByUri(string) (*models.DBRoom, error)
+	RegisterUserInRoom(string, string) error
+	AddPot(string, string, int) (int, error)
+	RetrievePot(string, string, int) (int, error)
 }
 
 type RoomServiceImpl struct {
@@ -28,7 +28,7 @@ func NewRoomService(collection *mongo.Collection) RoomService {
 	return &RoomServiceImpl{collection}
 }
 
-func (rs *RoomServiceImpl) CreateRoom(room *models.RoomInput) (*models.DBRoom, error) {
+func (rs *RoomServiceImpl) CreateRoom(room *models.CreateRoomInput) (*models.DBRoom, error) {
 
 	ctx := context.Background()
 

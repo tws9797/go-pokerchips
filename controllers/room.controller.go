@@ -1,9 +1,11 @@
 package controllers
 
 import (
+	"encoding/json"
 	"github.com/gin-gonic/gin"
 	"go-pokerchips/models"
 	"go-pokerchips/services"
+	"log"
 	"net/http"
 	"strings"
 )
@@ -20,7 +22,7 @@ func NewRoomController(roomService services.RoomService) RoomController {
 
 func (rc *RoomController) CreateRoom(c *gin.Context) {
 
-	var room *models.RoomInput
+	var room *models.CreateRoomInput
 
 	if err := c.ShouldBindJSON(&room); err != nil {
 		c.JSON(http.StatusBadRequest, err.Error())
@@ -41,5 +43,27 @@ func (rc *RoomController) CreateRoom(c *gin.Context) {
 		return
 	}
 
+	userSession := map[string]string{
+		"uri":  room.Uri,
+		"name": room.Creator,
+	}
+
+	encodedStr, err := json.Marshal(userSession)
+
+	if err != nil {
+		log.Println(err)
+	}
+
+	c.SetCookie("session", string(encodedStr), 60*60*3600, "/", "localhost", false, false)
 	c.JSON(http.StatusCreated, gin.H{"status": "success", "data": newRoom})
+}
+
+func (rc *RoomController) JoinRoom(c *gin.Context) {
+
+	var joinRoom *models.JoinRoomInput
+
+	if err := c.ShouldBindJSON(&joinRoom); err != nil {
+		c.JSON(http.StatusBadRequest, err.Error())
+		return
+	}
 }

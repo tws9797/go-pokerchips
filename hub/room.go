@@ -95,11 +95,14 @@ func (room *Room) broadcastClientsInRoom(message []byte) {
 func (room *Room) notifyClientJoined(client *Client) {
 
 	fmt.Printf("notifyClientJoined: %v\n", client.name)
+	fmt.Printf("Latest Room Pot: %v\n", room.Pot)
 
 	message := &Message{
+		Pot:     room.Pot,
 		Action:  SendMessageAction,
 		Message: fmt.Sprintf(welcomeMessage, client.name),
 	}
+
 	room.broadcastClientsInRoom(message.encode())
 }
 

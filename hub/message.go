@@ -9,14 +9,13 @@ const (
 	AddPot            = "add-pot"
 	RetrievePot       = "retrieve-pot"
 	SendMessageAction = "send-message"
-	JoinRoomAction    = "join-room"
 	LeaveRoomAction   = "leave-room"
 )
 
 type Message struct {
 	Action  string  `json:"action"`
 	Message string  `json:"message"`
-	Pot     int     `json:"pot,omitempty"`
+	Pot     int     `json:"pot"`
 	Sender  *Client `json:"sender"`
 }
 

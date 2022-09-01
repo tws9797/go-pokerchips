@@ -15,5 +15,5 @@ func NewRoomRouteController(roomController controllers.RoomController) RoomRoute
 
 func (rc *RoomRouteController) RoomRoute(rg *gin.RouterGroup) {
 	router := rg.Group("/room")
-	router.POST("/", rc.roomController.CreateRoom)
+	router.POST("/create", rc.roomController.CreateRoom)
 }

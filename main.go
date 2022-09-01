@@ -2,12 +2,15 @@ package main
 
 import (
 	"context"
-	"github.com/gin-contrib/static"
+	"encoding/json"
+	"fmt"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
 	"go-pokerchips/config"
 	"go-pokerchips/controllers"
 	"go-pokerchips/hub"
+	"go-pokerchips/models"
 	"go-pokerchips/routers"
 	"go-pokerchips/services"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -60,10 +63,15 @@ func main() {
 
 	// Start the websocket hub
 	r = gin.Default()
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:8081"},
+		AllowMethods:     []string{"*"},
+		AllowHeaders:     []string{"Content-Type"},
+		AllowCredentials: true,
+	}))
+
 	h := hub.NewHub(roomService)
 
-	// Serve local file
-	r.Use(static.Serve("/", static.LocalFile("./public", false)))
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "success", "message": "pong"})
 	})
@@ -74,21 +82,35 @@ func main() {
 	}
 
 	r.GET("/ws", func(c *gin.Context) {
-		name, _ := c.Request.URL.Query()["name"]
-		roomId, _ := c.Request.URL.Query()["uri"]
 
-		foundRoom := h.FindRoomByUri(roomId[0])
+		var session string
+		session, err = c.Cookie("session")
+
+		fmt.Println(session)
+
+		var roomUser *models.JoinRoomInput
+		if err = json.Unmarshal([]byte(session), &roomUser); err != nil {
+			log.Println(err)
+		}
+
+		fmt.Println(roomUser)
+
+		foundRoom := h.FindRoomByUri(roomUser.Uri)
 
 		if foundRoom == nil {
 
 			// Get room from database
-			room, _ := roomService.FindRoomByUri(roomId[0])
+			var room *models.DBRoom
+			room, err = roomService.FindRoomByUri(roomUser.Uri)
+			if err != nil {
+				fmt.Println(err)
+			}
 
 			// Create the room in the memory
 			foundRoom = h.CreateRoom(room)
 		}
 
-		hub.ServeWS(h, foundRoom, name[0], c)
+		hub.ServeWS(h, foundRoom, roomUser.User, c)
 	})
 
 	log.Fatal(r.Run("localhost:" + cfg.Port))
