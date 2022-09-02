@@ -5,8 +5,8 @@ import (
 	"go-pokerchips/models"
 )
 
-const welcomeMessage = "%s joined the room"
-const leaveMessage = "%s left the room"
+const welcomeMessage = "> %s joined the room."
+const leaveMessage = "> %s left the room."
 
 type Room struct {
 	Id     string         `json:"id"`
@@ -67,6 +67,15 @@ func (room *Room) registerClientInRoom(client *Client) {
 		fmt.Println(err)
 	}
 	room.clients[client] = true
+
+	//Notify client with his/her username
+	message := &Message{
+		Pot:    room.Pot,
+		Action: JoinRoomAction,
+		Sender: client.name,
+	}
+	client.send <- message.encode()
+
 	room.notifyClientJoined(client)
 }
 
@@ -98,9 +107,9 @@ func (room *Room) notifyClientJoined(client *Client) {
 	fmt.Printf("Latest Room Pot: %v\n", room.Pot)
 
 	message := &Message{
-		Pot:     room.Pot,
 		Action:  SendMessageAction,
 		Message: fmt.Sprintf(welcomeMessage, client.name),
+		Sender:  client.name,
 	}
 
 	room.broadcastClientsInRoom(message.encode())
@@ -113,6 +122,7 @@ func (room *Room) notifyClientLeft(client *Client) {
 	message := &Message{
 		Action:  SendMessageAction,
 		Message: fmt.Sprintf(leaveMessage, client.name),
+		Sender:  client.name,
 	}
 	room.broadcastClientsInRoom(message.encode())
 }

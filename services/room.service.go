@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/dchest/uniuri"
 	"go-pokerchips/models"
 	"go.mongodb.org/mongo-driver/bson"
@@ -16,8 +17,8 @@ type RoomService interface {
 	CreateRoom(*models.CreateRoomInput) (*models.DBRoom, error)
 	FindRoomByUri(string) (*models.DBRoom, error)
 	RegisterUserInRoom(string, string) error
-	AddPot(string, string, int) (int, error)
-	RetrievePot(string, string, int) (int, error)
+	AddPot(string, string, int) (*models.UpdatePotResponse, error)
+	RetrievePot(string, string, int) (*models.UpdatePotResponse, error)
 }
 
 type RoomServiceImpl struct {
@@ -126,18 +127,22 @@ func (rs *RoomServiceImpl) RegisterUserInRoom(id string, name string) error {
 	return nil
 }
 
-func (rs *RoomServiceImpl) AddPot(id string, name string, chips int) (int, error) {
+func (rs *RoomServiceImpl) AddPot(id string, name string, chips int) (*models.UpdatePotResponse, error) {
 
 	ctx := context.Background()
 
+	fmt.Println(id)
+	fmt.Println(name)
+	fmt.Println(chips)
+
 	room, err := rs.FindRoomById(id)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
 	if _, ok := room.Record[name]; ok {
 		if room.Record[name] < chips {
-			return 0, err
+			return nil, err
 		}
 		room.Record[name] -= chips
 	}
@@ -153,23 +158,29 @@ func (rs *RoomServiceImpl) AddPot(id string, name string, chips int) (int, error
 	_, err = rs.collection.UpdateOne(ctx, query, update)
 
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
-	return room.Pot, err
+	updatePotResp := &models.UpdatePotResponse{
+		Pot:          room.Pot,
+		CurrentChips: room.Record[name],
+		Sender:       name,
+	}
+	
+	return updatePotResp, err
 }
 
-func (rs *RoomServiceImpl) RetrievePot(id string, name string, chips int) (int, error) {
+func (rs *RoomServiceImpl) RetrievePot(id string, name string, chips int) (*models.UpdatePotResponse, error) {
 	ctx := context.Background()
 
 	room, err := rs.FindRoomById(id)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
 	room.Pot -= chips
 	if room.Pot < 0 {
-		return 0, errors.New("pot is not enough ")
+		return nil, errors.New("pot is not enough ")
 	}
 	if _, ok := room.Record[name]; ok {
 		room.Record[name] += chips
@@ -185,8 +196,13 @@ func (rs *RoomServiceImpl) RetrievePot(id string, name string, chips int) (int, 
 	_, err = rs.collection.UpdateOne(ctx, query, update)
 
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
-	return room.Pot, err
+	var updatePotResp *models.UpdatePotResponse
+	updatePotResp.Pot = room.Pot
+	updatePotResp.CurrentChips = room.Record[name]
+	updatePotResp.Sender = name
+
+	return updatePotResp, err
 }

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"github.com/go-redis/redis/v8"
 	"go-pokerchips/config"
 	"go-pokerchips/controllers"
 	"go-pokerchips/hub"
@@ -27,7 +26,6 @@ const (
 var (
 	r           *gin.Engine
 	mongoClient *mongo.Client
-	redisClient *redis.Client
 
 	roomCollection      *mongo.Collection
 	roomService         services.RoomService
@@ -45,8 +43,7 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), TIMEOUT*time.Second)
 	defer cancel()
 
-	// Get redis and mongodb connection
-	redisClient = config.InitRedis(cfg, ctx)
+	// Get mongodb connection
 	mongoClient = config.InitMongo(cfg, ctx)
 	defer func() {
 		if err = mongoClient.Disconnect(ctx); err != nil {
@@ -86,14 +83,10 @@ func main() {
 		var session string
 		session, err = c.Cookie("session")
 
-		fmt.Println(session)
-
 		var roomUser *models.JoinRoomInput
 		if err = json.Unmarshal([]byte(session), &roomUser); err != nil {
 			log.Println(err)
 		}
-
-		fmt.Println(roomUser)
 
 		foundRoom := h.FindRoomByUri(roomUser.Uri)
 

@@ -171,8 +171,6 @@ func (client *Client) handleNewMessage(message []byte) {
 		log.Printf("Error on unmarshal JSON message %s", err)
 	}
 
-	msg.Sender = client
-
 	switch msg.Action {
 	case SendMessageAction:
 		fmt.Println("SendMessageAction")
@@ -194,18 +192,18 @@ func (client *Client) addPot(message Message) {
 
 	fmt.Printf("%v trying to add pot \n", client.name)
 	pot := message.Pot
-	fmt.Println("pot")
-	fmt.Println(pot)
 
-	newPot, err := client.hub.roomService.AddPot(client.room.Id, client.name, pot)
-	message.Message = fmt.Sprintf("%v bet for %v", client.name, pot)
+	updatePotResp, err := client.hub.roomService.AddPot(client.room.Id, client.name, pot)
+	message.Message = fmt.Sprintf("%v bet %v.", client.name, pot)
 
 	if err != nil {
 		message.Message = "not enough pot to bet dude"
 	}
 
-	message.Action = "update-pot"
-	message.Pot = newPot
+	message.Action = UpdatePot
+	message.Pot = updatePotResp.Pot
+	message.CurrentChips = updatePotResp.CurrentChips
+	message.Sender = client.name
 
 	client.room.broadcast <- &message
 }
@@ -214,15 +212,17 @@ func (client *Client) retrievePot(message Message) {
 
 	fmt.Printf("%v trying to retrive pot \n", client.name)
 	pot := message.Pot
-	newPot, err := client.hub.roomService.RetrievePot(client.room.Id, client.name, pot)
-	message.Message = fmt.Sprintf("%v retrieve for %v", client.name, pot)
+	updatePotResp, err := client.hub.roomService.RetrievePot(client.room.Id, client.name, pot)
+	message.Message = fmt.Sprintf("%v take %v.", client.name, pot)
 
 	if err != nil {
 		message.Message = "not enough pot to retrieved dude"
 	}
 
-	message.Action = "update-pot"
-	message.Pot = newPot
+	message.Action = UpdatePot
+	message.Pot = updatePotResp.Pot
+	message.CurrentChips = updatePotResp.CurrentChips
+	message.Sender = client.name
 
 	client.room.broadcast <- &message
 }

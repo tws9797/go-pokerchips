@@ -10,19 +10,25 @@ type DBRoom struct {
 	Uri       string             `json:"uri" bson:"uri"`
 	Pot       int                `json:"pot" bson:"pot"`
 	Record    map[string]int     `json:"record" bson:"record"`
-	CreatedAt time.Time          `json:"created_at" bson:"created_at"`
-	UpdatedAt time.Time          `json:"updated_at" bson:"updated_at"`
+	CreatedAt time.Time          `json:"createdAt" bson:"createdAt"`
+	UpdatedAt time.Time          `json:"updatedAt" bson:"updatedAt"`
 }
 
 type CreateRoomInput struct {
 	Creator   string         `json:"name" bson:"name"`
 	Uri       string         `json:"uri" bson:"uri"`
 	Record    map[string]int `json:"record" bson:"record"`
-	CreatedAt time.Time      `json:"created_at" bson:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at" bson:"updated_at"`
+	CreatedAt time.Time      `json:"createdAt" bson:"createdAt"`
+	UpdatedAt time.Time      `json:"updatedAt" bson:"updatedAt"`
 }
 
 type JoinRoomInput struct {
 	User string `json:"name"`
 	Uri  string `json:"uri"`
+}
+
+type UpdatePotResponse struct {
+	Pot          int    `json:"pot"`
+	Sender       string `json:"name"`
+	CurrentChips int    `json:"currentChips"`
 }
