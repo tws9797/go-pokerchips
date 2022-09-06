@@ -18,7 +18,7 @@ type Message struct {
 	Action       string `json:"action"`
 	Message      string `json:"message"`
 	Pot          int    `json:"pot,omitempty"`
-	CurrentChips int    `json:"currentChips,omitempty"`
+	CurrentChips int    `json:"currentChips"`
 	Sender       string `json:"sender,omitempty"`
 }
 

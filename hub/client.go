@@ -190,20 +190,22 @@ func (client *Client) handleNewMessage(message []byte) {
 
 func (client *Client) addPot(message Message) {
 
-	fmt.Printf("%v trying to add pot \n", client.name)
+	fmt.Printf("%v trying to add pot %v\n", client.name, message.Pot)
 	pot := message.Pot
 
 	updatePotResp, err := client.hub.roomService.AddPot(client.room.Id, client.name, pot)
-	message.Message = fmt.Sprintf("%v bet %v.", client.name, pot)
-
 	if err != nil {
-		message.Message = "not enough pot to bet dude"
+		fmt.Println(err)
 	}
-
+	message.Message = fmt.Sprintf("%v bet %v.", client.name, pot)
 	message.Action = UpdatePot
 	message.Pot = updatePotResp.Pot
 	message.CurrentChips = updatePotResp.CurrentChips
 	message.Sender = client.name
+
+	if err != nil {
+		message.Message = "You do not have enough chips to bet."
+	}
 
 	client.room.broadcast <- &message
 }
@@ -214,15 +216,14 @@ func (client *Client) retrievePot(message Message) {
 	pot := message.Pot
 	updatePotResp, err := client.hub.roomService.RetrievePot(client.room.Id, client.name, pot)
 	message.Message = fmt.Sprintf("%v take %v.", client.name, pot)
-
-	if err != nil {
-		message.Message = "not enough pot to retrieved dude"
-	}
-
 	message.Action = UpdatePot
 	message.Pot = updatePotResp.Pot
 	message.CurrentChips = updatePotResp.CurrentChips
 	message.Sender = client.name
+
+	if err != nil {
+		message.Message = "You do not have enough pot to retrieve."
+	}
 
 	client.room.broadcast <- &message
 }

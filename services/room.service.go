@@ -3,7 +3,6 @@ package services
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/dchest/uniuri"
 	"go-pokerchips/models"
 	"go.mongodb.org/mongo-driver/bson"
@@ -131,10 +130,6 @@ func (rs *RoomServiceImpl) AddPot(id string, name string, chips int) (*models.Up
 
 	ctx := context.Background()
 
-	fmt.Println(id)
-	fmt.Println(name)
-	fmt.Println(chips)
-
 	room, err := rs.FindRoomById(id)
 	if err != nil {
 		return nil, err
@@ -142,7 +137,7 @@ func (rs *RoomServiceImpl) AddPot(id string, name string, chips int) (*models.Up
 
 	if _, ok := room.Record[name]; ok {
 		if room.Record[name] < chips {
-			return nil, err
+			return nil, errors.New("not enough chips to pay the bet")
 		}
 		room.Record[name] -= chips
 	}
@@ -166,7 +161,7 @@ func (rs *RoomServiceImpl) AddPot(id string, name string, chips int) (*models.Up
 		CurrentChips: room.Record[name],
 		Sender:       name,
 	}
-	
+
 	return updatePotResp, err
 }
 
