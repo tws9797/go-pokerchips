@@ -180,8 +180,8 @@ func (client *Client) handleNewMessage(message []byte) {
 	//	client.room.register <- client
 	case AddPot:
 		client.addPot(msg)
-	case RetrievePot:
-		client.retrievePot(msg)
+	case TakePot:
+		client.takePot(msg)
 	case LeaveRoomAction:
 		fmt.Println("LeaveRoomAction")
 		client.room.unregister <- client
@@ -210,11 +210,12 @@ func (client *Client) addPot(message Message) {
 	client.room.broadcast <- &message
 }
 
-func (client *Client) retrievePot(message Message) {
+func (client *Client) takePot(message Message) {
 
-	fmt.Printf("%v trying to retrive pot \n", client.name)
 	pot := message.Pot
-	updatePotResp, err := client.hub.roomService.RetrievePot(client.room.Id, client.name, pot)
+	fmt.Printf("%v trying to retrive pot with amount : %v \n", client.name, pot)
+
+	updatePotResp, err := client.hub.roomService.TakePot(client.room.Id, client.name, pot)
 	message.Message = fmt.Sprintf("%v take %v.", client.name, pot)
 	message.Action = UpdatePot
 	message.Pot = updatePotResp.Pot

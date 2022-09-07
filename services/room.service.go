@@ -17,7 +17,7 @@ type RoomService interface {
 	FindRoomByUri(string) (*models.DBRoom, error)
 	RegisterUserInRoom(string, string) error
 	AddPot(string, string, int) (*models.UpdatePotResponse, error)
-	RetrievePot(string, string, int) (*models.UpdatePotResponse, error)
+	TakePot(string, string, int) (*models.UpdatePotResponse, error)
 }
 
 type RoomServiceImpl struct {
@@ -167,7 +167,8 @@ func (rs *RoomServiceImpl) AddPot(id string, name string, chips int) (*models.Up
 	return updatePotResp, err
 }
 
-func (rs *RoomServiceImpl) RetrievePot(id string, name string, chips int) (*models.UpdatePotResponse, error) {
+func (rs *RoomServiceImpl) TakePot(id string, name string, chips int) (*models.UpdatePotResponse, error) {
+
 	ctx := context.Background()
 
 	room, err := rs.FindRoomById(id)
@@ -179,6 +180,7 @@ func (rs *RoomServiceImpl) RetrievePot(id string, name string, chips int) (*mode
 	if room.Pot < 0 {
 		return nil, errors.New("pot is not enough ")
 	}
+
 	if _, ok := room.Record[name]; ok {
 		room.Record[name] += chips
 	}
@@ -196,10 +198,11 @@ func (rs *RoomServiceImpl) RetrievePot(id string, name string, chips int) (*mode
 		return nil, err
 	}
 
-	var updatePotResp *models.UpdatePotResponse
-	updatePotResp.Pot = room.Pot
-	updatePotResp.CurrentChips = room.Record[name]
-	updatePotResp.Sender = name
-
+	updatePotResp := &models.UpdatePotResponse{
+		Pot:          room.Pot,
+		CurrentChips: room.Record[name],
+		Sender:       name,
+	}
+	
 	return updatePotResp, err
 }

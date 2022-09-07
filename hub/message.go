@@ -7,7 +7,7 @@ import (
 
 const (
 	AddPot            = "add-pot"
-	RetrievePot       = "retrieve-pot"
+	TakePot           = "take-pot"
 	UpdatePot         = "update-pot"
 	JoinRoomAction    = "join-room"
 	SendMessageAction = "send-message"
