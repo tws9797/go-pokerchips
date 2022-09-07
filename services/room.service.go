@@ -92,7 +92,7 @@ func (rs *RoomServiceImpl) FindRoomByUri(uri string) (*models.DBRoom, error) {
 	err := rs.collection.FindOne(ctx, query).Decode(&room)
 
 	if err != nil {
-		return nil, err
+		return nil, errors.New("room not found")
 	}
 
 	return room, nil
@@ -109,6 +109,8 @@ func (rs *RoomServiceImpl) RegisterUserInRoom(id string, name string) error {
 
 	if _, ok := room.Record[name]; !ok {
 		room.Record[name] = 1000
+	} else {
+		return errors.New("username has been registered in room")
 	}
 
 	obId, _ := primitive.ObjectIDFromHex(id)

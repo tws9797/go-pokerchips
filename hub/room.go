@@ -62,10 +62,6 @@ func (room *Room) RunRoom() {
 func (room *Room) registerClientInRoom(client *Client) {
 
 	fmt.Printf("registerClientInRoom: %v\n", client.name)
-	err := room.hub.roomService.RegisterUserInRoom(room.Id, client.name)
-	if err != nil {
-		fmt.Println(err)
-	}
 	room.clients[client] = true
 
 	//Notify client with his/her username

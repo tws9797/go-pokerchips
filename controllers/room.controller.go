@@ -82,3 +82,39 @@ func (rc *RoomController) CreateRoom(c *gin.Context) {
 	c.SetCookie("session", string(encodedStr), 60*60*3600, "/", "localhost", false, false)
 	c.JSON(http.StatusCreated, gin.H{"status": "success", "data": newRoom})
 }
+
+func (rc *RoomController) JoinRoom(c *gin.Context) {
+
+	var roomUser *models.JoinRoomInput
+
+	if err := c.ShouldBindJSON(&roomUser); err != nil {
+		c.JSON(http.StatusBadRequest, err.Error())
+		return
+	}
+
+	room, err := rc.roomService.FindRoomByUri(roomUser.Uri)
+
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"status": "fail", "message": err.Error()})
+		return
+	}
+
+	if err = rc.roomService.RegisterUserInRoom(room.Id.Hex(), roomUser.User); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"status": "fail", "message": err.Error()})
+		return
+	}
+
+	userSession := map[string]string{
+		"uri":  room.Uri,
+		"name": roomUser.User,
+	}
+
+	encodedStr, err := json.Marshal(userSession)
+
+	if err != nil {
+		log.Println(err)
+	}
+
+	c.SetCookie("session", string(encodedStr), 60*60*3600, "/", "localhost", false, false)
+	c.JSON(http.StatusOK, gin.H{"status": "success", "data": room})
+}
