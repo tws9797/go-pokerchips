@@ -13,6 +13,8 @@ func InitMongo(cfg Config, ctx context.Context) *mongo.Client {
 	// Create a new client and connect to the server
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(cfg.DBUri))
 
+	fmt.Println(cfg.DBUri)
+
 	if err != nil {
 		panic(err)
 	}

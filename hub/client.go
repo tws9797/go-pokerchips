@@ -219,6 +219,8 @@ func (client *Client) takePot(message Message) {
 	message.Message = fmt.Sprintf("%v take %v.", client.name, pot)
 	message.Action = UpdatePot
 	message.Pot = updatePotResp.Pot
+
+	fmt.Println(message.Pot)
 	message.CurrentChips = updatePotResp.CurrentChips
 	message.Sender = client.name
 

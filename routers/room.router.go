@@ -15,7 +15,7 @@ func NewRoomRouteController(roomController controllers.RoomController) RoomRoute
 
 func (rc *RoomRouteController) RoomRoute(rg *gin.RouterGroup) {
 	router := rg.Group("/room")
-	router.GET("/get", rc.roomController.GetRoom)
+	router.GET("/get/:uri", rc.roomController.GetRoom)
 	router.POST("/join", rc.roomController.JoinRoom)
 	router.POST("/create", rc.roomController.CreateRoom)
 }

@@ -35,6 +35,11 @@ func (rc *RoomController) GetRoom(c *gin.Context) {
 		log.Println(err)
 	}
 
+	if c.Param("uri") != roomUser.Uri {
+		c.JSON(http.StatusNotFound, gin.H{"status": "fail", "message": "room uri does not match with session"})
+		return
+	}
+
 	room, err := rc.roomService.FindRoomByUri(roomUser.Uri)
 
 	if err != nil {
